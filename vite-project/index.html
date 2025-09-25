@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JANKEN BATTLE 2025</title>
+    <!-- CSSファイルをリンク -->
+    <link rel="stylesheet" href="/src/index.css">
+</head>
+<body>
+    <div id="root">
+        <!-- Reactではなく、静的なHTMLコンテンツを直接記述 -->
+        <div class="game-container">
+            <h1>JANKEN BATTLE</h1>
+            
+            <div class="streak-badge" id="streakBadge">
+                🔥 <span id="streakCount">0</span> WIN STREAK
+            </div>
+            
+            <div class="score-board">
+                <div class="score-card">
+                    <h3>Player</h3>
+                    <div class="score-value" id="playerScore">0</div>
+                </div>
+                <div class="score-card">
+                    <h3>Draw</h3>
+                    <div class="score-value" id="drawScore">0</div>
+                </div>
+                <div class="score-card">
+                    <h3>CPU</h3>
+                    <div class="score-value" id="computerScore">0</div>
+                </div>
+            </div>
+    
+            <div class="choices-container">
+                <button class="choice-btn" data-choice="rock" aria-label="Rock">✊</button>
+                <button class="choice-btn" data-choice="scissors" aria-label="Scissors">✌️</button>
+                <button class="choice-btn" data-choice="paper" aria-label="Paper">✋</button>
+            </div>
+    
+            <div class="battle-area" id="battleArea">
+                <div class="player-choice" id="playerChoice">
+                    <h3>Player</h3>
+                    <div class="choice-display" id="playerDisplay"></div>
+                </div>
+                <div class="vs" id="vsText">VS</div>
+                <div class="player-choice" id="computerChoice">
+                    <h3>CPU</h3>
+                    <div class="choice-display" id="computerDisplay"></div>
+                </div>
+            </div>
+    
+            <div id="resultArea" style="display: none;">
+                <div class="result" id="resultMessage"></div>
+            </div>
+    
+            <button class="reset-btn" id="resetButton">Reset Game</button>
+        </div>
+    </div>
+    <!-- JavaScriptファイルをリンク -->
+    <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
