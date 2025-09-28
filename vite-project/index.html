@@ -3,61 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JANKEN BATTLE 2025</title>
-    <!-- CSSファイルをリンク -->
-    <link rel="stylesheet" href="/src/index.css">
+    <title>簡易カードゲーム</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="root">
-        <!-- Reactではなく、静的なHTMLコンテンツを直接記述 -->
-        <div class="game-container">
-            <h1>JANKEN BATTLE</h1>
-            
-            <div class="streak-badge" id="streakBadge">
-                🔥 <span id="streakCount">0</span> WIN STREAK
+
+    <div id="game-container">
+        <!-- CPUエリア -->
+        <div id="cpu-area" class="player-area">
+            <div class="status">
+                <span>CPU</span>
+                <span>HP: <span id="cpu-hp">100</span></span>
+                <span>MP: <span id="cpu-mp">50</span></span>
             </div>
-            
-            <div class="score-board">
-                <div class="score-card">
-                    <h3>Player</h3>
-                    <div class="score-value" id="playerScore">0</div>
-                </div>
-                <div class="score-card">
-                    <h3>Draw</h3>
-                    <div class="score-value" id="drawScore">0</div>
-                </div>
-                <div class="score-card">
-                    <h3>CPU</h3>
-                    <div class="score-value" id="computerScore">0</div>
-                </div>
+            <div id="cpu-hand" class="hand"></div>
+        </div>
+
+        <!-- 中央エリア（山札・メッセージ） -->
+        <div id="center-area">
+            <div class="deck-info">
+                <div id="deck">山札: <span id="deck-count">0</span>枚</div>
+                <div id="discard-pile">捨て札: <span id="discard-count">0</span>枚</div>
             </div>
-    
-            <div class="choices-container">
-                <button class="choice-btn" data-choice="rock" aria-label="Rock">✊</button>
-                <button class="choice-btn" data-choice="scissors" aria-label="Scissors">✌️</button>
-                <button class="choice-btn" data-choice="paper" aria-label="Paper">✋</button>
+            <div id="message-area">あなたのターンです。</div>
+        </div>
+
+        <!-- プレイヤーエリア -->
+        <div id="player-area" class="player-area">
+            <div id="player-hand" class="hand"></div>
+            <div class="status">
+                <span>PLAYER</span>
+                <span>HP: <span id="player-hp">100</span></span>
+                <span>MP: <span id="player-mp">50</span></span>
+                <button id="end-turn-button">ターン終了</button>
             </div>
-    
-            <div class="battle-area" id="battleArea">
-                <div class="player-choice" id="playerChoice">
-                    <h3>Player</h3>
-                    <div class="choice-display" id="playerDisplay"></div>
-                </div>
-                <div class="vs" id="vsText">VS</div>
-                <div class="player-choice" id="computerChoice">
-                    <h3>CPU</h3>
-                    <div class="choice-display" id="computerDisplay"></div>
-                </div>
-            </div>
-    
-            <div id="resultArea" style="display: none;">
-                <div class="result" id="resultMessage"></div>
-            </div>
-    
-            <button class="reset-btn" id="resetButton">Reset Game</button>
         </div>
     </div>
-    <!-- JavaScriptファイルをリンク -->
-    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ゲームオーバー画面 -->
+    <div id="game-over-modal" class="hidden">
+        <div id="game-over-content">
+            <h2 id="game-over-message"></h2>
+            <button id="restart-button">もう一度遊ぶ</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

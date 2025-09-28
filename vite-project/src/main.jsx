@@ -1,166 +1,255 @@
-let playerScore = 0;
-let computerScore = 0;
-let drawScore = 0;
-let streak = 0;
-let isPlaying = false;
+// =============================
+// 初期設定
+// =============================
+const allCards = [
+    { name: "剣", type: "attack", power: 10, cost: 0, effect: "10ダメージ" },
+    { name: "強斬り", type: "attack", power: 25, cost: 15, effect: "25ダメージ" },
+    { name: "魔法の矢", type: "attack", power: 15, cost: 5, effect: "15ダメージ" },
+    { name: "薬草", type: "heal", power: 20, cost: 10, effect: "HPを20回復" },
+    { name: "魔力の源", type: "support", power: 30, cost: 0, effect: "MPを30回復" }
+];
 
-const choices = {
-    rock: '✊',
-    scissors: '✌️',
-    paper: '✋'
-};
+const START_HP = 100;
+const START_MP = 50;
+const START_HAND_NUM = 5;
 
-const winConditions = {
-    rock: 'scissors',
-    scissors: 'paper',
-    paper: 'rock'
-};
+let player, cpu, deck, discardPile, isPlayerTurn, cardUsedThisTurn;
 
-const resultMessages = {
-    win: ['Victory! 🎉', 'You Win! ⚡', 'Excellent! 🌟'],
-    lose: ['Defeated 💀', 'You Lose 😢', 'Try Again 🎮'],
-    draw: ['Draw! 🤝', 'Tie Game! ⚖️', 'Even Match! 🔄']
-};
+// =============================
+// DOM要素の取得
+// =============================
+const playerHpEl = document.getElementById('player-hp');
+const playerMpEl = document.getElementById('player-mp');
+const cpuHpEl = document.getElementById('cpu-hp');
+const cpuMpEl = document.getElementById('cpu-mp');
+const playerHandEl = document.getElementById('player-hand');
+const cpuHandEl = document.getElementById('cpu-hand');
+const deckCountEl = document.getElementById('deck-count');
+const discardCountEl = document.getElementById('discard-count');
+const messageAreaEl = document.getElementById('message-area');
+const endTurnButton = document.getElementById('end-turn-button');
+const gameOverModal = document.getElementById('game-over-modal');
+const gameOverMessageEl = document.getElementById('game-over-message');
+const restartButton = document.getElementById('restart-button');
 
-function getRandomMessage(type) {
-    const messages = resultMessages[type];
-    return messages[Math.floor(Math.random() * messages.length)];
-}
+// =============================
+// ゲームのコアロジック
+// =============================
 
-function getComputerChoice() {
-    const choices = ['rock', 'scissors', 'paper'];
-    return choices[Math.floor(Math.random() * choices.length)];
-}
+// ゲームの初期化
+function initGame() {
+    player = { hp: START_HP, mp: START_MP, hand: [] };
+    cpu = { hp: START_HP, mp: START_MP, hand: [] };
+    deck = createDeck();
+    discardPile = [];
+    isPlayerTurn = true;
+    cardUsedThisTurn = false;
 
-function determineWinner(player, computer) {
-    if (player === computer) return 'draw';
-    return winConditions[player] === computer ? 'win' : 'lose';
-}
-
-function updateScores() {
-    document.getElementById('playerScore').textContent = playerScore;
-    document.getElementById('computerScore').textContent = computerScore;
-    document.getElementById('drawScore').textContent = drawScore;
-}
-
-function updateStreak(won) {
-    const streakBadge = document.getElementById('streakBadge');
-    const streakCount = document.getElementById('streakCount');
+    // 初期手札を配る
+    for (let i = 0; i < START_HAND_NUM; i++) {
+        drawCard(player);
+        drawCard(cpu);
+    }
     
-    if (won) {
-        streak++;
-        if (streak >= 2) {
-            streakBadge.classList.add('show');
-            streakCount.textContent = streak;
+    updateUI();
+    setMessage("あなたのターンです。");
+    gameOverModal.classList.add('hidden');
+}
+
+// 山札を作成してシャッフル
+function createDeck() {
+    const newDeck = [];
+    // 各カードを4枚ずつ山札に追加
+    for (const card of allCards) {
+        for (let i = 0; i < 4; i++) {
+            newDeck.push({ ...card });
         }
-    } else {
-        streak = 0;
-        streakBadge.classList.remove('show');
     }
+    // シャッフル (Fisher-Yates algorithm)
+    for (let i = newDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+    }
+    return newDeck;
 }
 
-function showResult(result) {
-    const resultArea = document.getElementById('resultArea');
-    const resultMessage = document.getElementById('resultMessage');
-    
-    resultArea.style.display = 'block';
-    resultMessage.className = 'result ' + result;
-    resultMessage.textContent = getRandomMessage(result);
-    
-    // Use requestAnimationFrame for smoother animation
-    requestAnimationFrame(() => {
-        resultMessage.classList.add('show');
-    });
-    
-    if (result === 'win') {
-        playerScore++;
-        updateStreak(true);
-    } else if (result === 'lose') {
-        computerScore++;
-        updateStreak(false);
-    } else {
-        drawScore++;
-        updateStreak(false);
+// カードを引く
+function drawCard(target) {
+    if (deck.length === 0) {
+        checkGameOver(); // 山札切れでゲームオーバー
+        return;
     }
+    target.hand.push(deck.pop());
+}
+
+// カードを使用する
+function playCard(card, user, opponent) {
+    // MPが足りるかチェック
+    if (user.mp < card.cost) {
+        setMessage("MPが足りません！");
+        return;
+    }
+
+    user.mp -= card.cost;
     
-    updateScores();
-    
+    // カードの効果を適用
+    switch (card.type) {
+        case 'attack':
+            opponent.hp -= card.power;
+            setMessage(`${user === player ? 'プレイヤー' : 'CPU'}が「${card.name}」を使用！ ${opponent === player ? 'プレイヤー' : 'CPU'}に${card.power}のダメージ！`);
+            break;
+        case 'heal':
+            user.hp += card.power;
+            setMessage(`${user === player ? 'プレイヤー' : 'CPU'}が「${card.name}」を使用！ HPが${card.power}回復した。`);
+            break;
+        case 'support':
+            user.mp += card.power;
+            setMessage(`${user === player ? 'プレイヤー' : 'CPU'}が「${card.name}」を使用！ MPが${card.power}回復した。`);
+            break;
+    }
+
+    // 手札から捨て札へ移動
+    user.hand = user.hand.filter(c => c !== card);
+    discardPile.push(card);
+
+    cardUsedThisTurn = true;
+    updateUI();
+    checkGameOver();
+}
+
+// ターン終了
+function endTurn() {
+    if (!isPlayerTurn) return; // CPUターン中はボタンを押せない
+
+    // プレイヤーのターン終了処理
+    isPlayerTurn = false;
+    cardUsedThisTurn = false;
+    setMessage("CPUのターンです。");
+    endTurnButton.disabled = true;
+
+    // 1枚ドロー
+    drawCard(player);
+    updateUI();
+
+    // CPUのターンを実行
+    setTimeout(cpuTurn, 1500);
+}
+
+// CPUの思考と行動
+function cpuTurn() {
+    if (checkGameOver()) return;
+
+    // 使用可能なカードを探す
+    const playableCards = cpu.hand.filter(card => card.cost <= cpu.mp);
+
+    if (playableCards.length > 0) {
+        // 簡単なAI: ランダムに使えるカードを1枚選ぶ
+        const cardToPlay = playableCards[Math.floor(Math.random() * playableCards.length)];
+        playCard(cardToPlay, cpu, player);
+    } else {
+        setMessage("CPUは何もできなかった！");
+    }
+
+    // CPUのターン終了処理
     setTimeout(() => {
-        isPlaying = false;
+        if (checkGameOver()) return;
+        drawCard(cpu);
+        isPlayerTurn = true;
+        cardUsedThisTurn = false;
+        setMessage("あなたのターンです。");
+        endTurnButton.disabled = false;
+        updateUI();
     }, 1500);
 }
 
-function playGame(playerChoice) {
-    if (isPlaying) return;
-    isPlaying = true;
+// 勝敗判定
+function checkGameOver() {
+    if (player.hp <= 0) {
+        showGameOver("あなたの負けです...");
+        return true;
+    }
+    if (cpu.hp <= 0) {
+        showGameOver("あなたの勝ちです！");
+        return true;
+    }
+    if (deck.length === 0 && player.hand.length === 0) {
+        showGameOver("山札がなくなり、引き分けです。");
+        return true;
+    }
+    return false;
+}
 
-    const computerChoice = getComputerChoice();
-    const battleArea = document.getElementById('battleArea');
-    const playerChoiceElem = document.getElementById('playerChoice');
-    const computerChoiceElem = document.getElementById('computerChoice');
-    const vsText = document.getElementById('vsText');
-    const resultArea = document.getElementById('resultArea');
-    const resultMessage = document.getElementById('resultMessage');
+function showGameOver(message) {
+    gameOverMessageEl.textContent = message;
+    gameOverModal.classList.remove('hidden');
+}
+
+
+// =============================
+// UI関連
+// =============================
+
+// UI全体を更新
+function updateUI() {
+    // ステータス表示
+    playerHpEl.textContent = Math.max(0, player.hp);
+    playerMpEl.textContent = player.mp;
+    cpuHpEl.textContent = Math.max(0, cpu.hp);
+    cpuMpEl.textContent = cpu.mp;
+
+    // 山札・捨て札枚数
+    deckCountEl.textContent = deck.length;
+    discardCountEl.textContent = discardPile.length;
     
-    // Reset
-    resultArea.style.display = 'none';
-    resultMessage.classList.remove('show');
-    battleArea.classList.remove('show');
-    playerChoiceElem.classList.remove('show');
-    computerChoiceElem.classList.remove('show');
-    vsText.classList.remove('show');
-    
-    // Set choices
-    document.getElementById('playerDisplay').textContent = choices[playerChoice];
-    document.getElementById('computerDisplay').textContent = choices[computerChoice];
-    
-    // Show battle area with staggered animations
-    requestAnimationFrame(() => {
-        battleArea.classList.add('show');
-        
-        setTimeout(() => playerChoiceElem.classList.add('show'), 100);
-        setTimeout(() => vsText.classList.add('show'), 200);
-        setTimeout(() => computerChoiceElem.classList.add('show'), 300);
-        
-        setTimeout(() => {
-            const result = determineWinner(playerChoice, computerChoice);
-            showResult(result);
-        }, 800);
+    // 手札表示
+    renderPlayerHand();
+    renderCpuHand();
+}
+
+// プレイヤーの手札を描画
+function renderPlayerHand() {
+    playerHandEl.innerHTML = '';
+    player.hand.forEach(card => {
+        const cardEl = document.createElement('div');
+        cardEl.classList.add('card');
+        if (player.mp < card.cost || !isPlayerTurn || cardUsedThisTurn) {
+            cardEl.classList.add('disabled');
+        }
+        cardEl.innerHTML = `
+            <div class="card-name">${card.name}</div>
+            <div class="card-effect">${card.effect}</div>
+            <div class="card-cost">MP: ${card.cost}</div>
+        `;
+        cardEl.addEventListener('click', () => {
+            if (isPlayerTurn && !cardUsedThisTurn && player.mp >= card.cost) {
+                playCard(card, player, cpu);
+            }
+        });
+        playerHandEl.appendChild(cardEl);
     });
 }
 
-function resetGame() {
-    playerScore = 0;
-    computerScore = 0;
-    drawScore = 0;
-    streak = 0;
-    updateScores();
-    
-    document.getElementById('battleArea').classList.remove('show');
-    document.getElementById('resultArea').style.display = 'none';
-    document.getElementById('streakBadge').classList.remove('show');
+// CPUの手札を描画（裏向き）
+function renderCpuHand() {
+    cpuHandEl.innerHTML = '';
+    for (let i = 0; i < cpu.hand.length; i++) {
+        const cardEl = document.createElement('div');
+        cardEl.classList.add('card', 'cpu-card');
+        cpuHandEl.appendChild(cardEl);
+    }
 }
 
-// Event listeners
-document.querySelectorAll('.choice-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        playGame(this.dataset.choice);
-    });
-});
+// メッセージを設定
+function setMessage(text) {
+    messageAreaEl.textContent = text;
+}
 
-// `resetGame` was inlined in the HTML, so let's attach it here
-document.getElementById('resetButton').addEventListener('click', resetGame);
 
-// Keyboard support
-document.addEventListener('keydown', function(e) {
-    if (isPlaying) return;
-    
-    const keyMap = {
-        '1': 'rock', 'r': 'rock',
-        '2': 'scissors', 's': 'scissors',
-        '3': 'paper', 'p': 'paper'
-    };
-    
-    const choice = keyMap[e.key.toLowerCase()];
-    if (choice) playGame(choice);
-});
+// =============================
+// イベントリスナー
+// =============================
+endTurnButton.addEventListener('click', endTurn);
+restartButton.addEventListener('click', initGame);
+
+// ゲーム開始
+window.addEventListener('DOMContentLoaded', initGame);
